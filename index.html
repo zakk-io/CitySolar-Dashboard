@@ -17,6 +17,12 @@
 
   <!-- Chart.js 4 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  <link href="
+  https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css
+  " rel="stylesheet">
+
+
 </head>
 
 <body class="bg-gray-50 text-gray-800">
@@ -28,6 +34,32 @@
       <i class="fa-solid fa-solar-panel fa-xl text-indigo-600"></i>
       <h1 class="h3 fw-semibold m-0">Solar Dashboard</h1>
     </header>
+
+<!-- Rwanda map ------------------------------------------------>
+<section class="mb-4">
+  <div id="cityMap" class="rounded shadow-sm border" style="height: 300px;"></div>
+</section>
+
+
+<!-- City chooser ------------------------------------------->
+<section class="mb-3">
+  <label for="cityInput" class="form-label fw-semibold">
+    enter a city name
+  </label>
+
+  <div class="input-group shadow-sm rounded-lg">
+    <input  type="text"
+            id="cityInput"
+            class="form-control focus:ring-0"
+            placeholder="e.g. kigali"
+            aria-label="City name">
+
+    <button class="btn btn-primary px-4" id="cityBtn" type="button"
+            title="Load forecast">
+      <i class="fa-solid fa-location-dot"></i>
+    </button>
+  </div>
+</section>
 
     <!-- Current-weather card ------------------------------->
     <section id="weatherNow" class="card shadow-sm mb-4 border-0">
@@ -74,6 +106,10 @@
   </div>
 
   <!-- Vite / ES-module entry -->
+
+  <script src="
+  https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js
+  "></script>
   <script type="module" src="main.js"></script>
 </body>
 </html>

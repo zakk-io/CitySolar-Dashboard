@@ -1,47 +1,78 @@
-/* main.js – Vite-friendly solar dashboard */
-import { GoogleGenAI } from "@google/genai";
-import Chart           from "chart.js/auto";
+/* main.js – Vite-friendly Solar Dashboard
+   -------------------------------------- */
 
-/* ---------------- CONFIG ---------------- */
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API ?? "YOUR_GEMINI_KEY_HERE";
-const SYS_CAP_KWP    = 5;
-const TILT_DEG       = 20;
+   import { GoogleGenAI } from "@google/genai";
+   import Chart           from "chart.js/auto";
+   import L               from "leaflet";
+   
+   /* ---------------- CONFIG ---------------- */
+   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API ?? "YOUR_GEMINI_KEY_HERE";
+   const SYS_CAP_KWP    = 5;
+   const TILT_DEG       = 20;
+   
+   /* --------------- DOM refs --------------- */
+   const weatherBox = document.querySelector("#weatherNow .card-body");
+   const summaryBox = document.getElementById("summary");
+   const dailyCtx   = document.getElementById("dailyChart");
+   const hourlyCtx  = document.getElementById("hourlyChart");
+   let   dailyChart, hourlyChart;
+   
+   /* ---------- City input handler ---------- */
+   const cityInput = document.getElementById("cityInput");
+   const cityBtn   = document.getElementById("cityBtn");
+   
+   cityBtn.addEventListener("click", changeCity);
+   cityInput.addEventListener("keydown", e => {
+     if (e.key === "Enter") changeCity();
+   });
+   
+   function changeCity() {
+     const newCity = cityInput.value.trim();
+     if (!newCity) return;
+   
+     /* 1. Update ?city= in the URL without reloading */
+     const params = new URLSearchParams(location.search);
+     params.set("city", newCity);
+     history.pushState({}, "", `${location.pathname}?${params}`);
+   
+     /* 2. Re-render dashboard for the new city */
+     loadDashboard(newCity);
+   }
+   
+   /* -------- TOP-LEVEL KICK-OFF ----------- */
+   const initialCity =
+     new URLSearchParams(location.search).get("city") ?? "Kigali";
+   
+   loadDashboard(initialCity);   // first render
+   
+   /* ------------- MAIN LOADER -------------- */
+   async function loadDashboard(city) {
+     summaryBox.textContent = `Loading solar forecast for ${city}…`;
+   
+     try {
+       const { lat, lon } = await geocode(city);
+       renderMap(lat, lon, city);
+   
+       const forecast    = await fetchForecast(lat, lon);
+       renderWeather(city, forecast.current);
+   
+       const climatology = await fetchClimatology(lat, lon);
+   
+       try {
+         const gem = await askGemini(city, forecast, climatology);
+         drawDashboard(gem);
+       } catch (aiErr) {
+         console.warn("Gemini failed, showing weather only:", aiErr);
+         summaryBox.textContent = "Live PV forecast unavailable (AI error).";
+       }
+     } catch (err) {
+       console.error(err);
+       summaryBox.textContent = `Error: ${err.message}`;
+     }
+   }
 
-/* --------------- DOM refs --------------- */
-const weatherBox = document.querySelector("#weatherNow .card-body");
-const summaryBox = document.getElementById("summary");
-const dailyCtx   = document.getElementById("dailyChart");
-const hourlyCtx  = document.getElementById("hourlyChart");
-let   dailyChart, hourlyChart;
 
-/* ----------------- BOOT ----------------- */
-/* ----------------- BOOT ----------------- */
-(async () => {
-    const city = new URLSearchParams(location.search).get("city") ?? "Kigali";
-    summaryBox.textContent = `Loading solar forecast for ${city}…`;
-  
-    try {
-      const { lat, lon } = await geocode(city);
-      const forecast     = await fetchForecast(lat, lon);
-      renderWeather(city, forecast.current);          // ← moved up
-  
-      const climatology  = await fetchClimatology(lat, lon);
-  
-      let gem;
-      try {
-        gem = await askGemini(city, forecast, climatology);
-        drawDashboard(gem);
-      } catch (aiErr) {
-        console.warn("Gemini failed, showing weather only:", aiErr);
-        summaryBox.textContent = "Live PV forecast unavailable (AI error).";
-      }
-    } catch (e) {
-      console.error(e);
-      summaryBox.textContent = `Error: ${e.message}`;
-    }
-  })();
-  
-
+   
 /* -------------- helpers ----------------- */
 async function geocode(city) {
   const url = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&format=json&limit=1`;
@@ -164,3 +195,34 @@ function drawDashboard(d) {
     options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
   });
 }
+
+
+
+
+
+
+
+const RWANDA_BOUNDS = [[-2.92, 28.85], [-0.99, 30.90]]
+
+let leafletMap;   
+function renderMap(lat, lon, city) {
+  if (!leafletMap) {
+    leafletMap = L.map("cityMap", {
+      zoomControl: false,
+      maxBounds: RWANDA_BOUNDS,
+      maxBoundsViscosity: 1.0      // prevents panning outside Rwanda
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      minZoom: 6,
+      maxZoom: 18,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(leafletMap);
+  }
+
+  leafletMap.setView([lat, lon], 8);                 // centre on the city
+  L.marker([lat, lon]).addTo(leafletMap)
+    .bindPopup(`<b>${city}</b>`).openPopup();
+}
+
