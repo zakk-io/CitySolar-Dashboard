@@ -1,19 +1,27 @@
 {
-  "name": "school_project",
+  "name": "citysolar-dashboard",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
+
+  "homepage": "https://zakk-io.github.io/CitySolar-Dashboard/",
+  "repository": "github:zakk-io/CitySolar-Dashboard",
+  "engines": { "node": ">=20.19" },
+
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy": "vite build && gh-pages -d dist",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vite build && gh-pages -d dist"
   },
+
   "devDependencies": {
-    "vite": "^6.2.0"
+    "vite": "^7.0.0",
+    "gh-pages": "^6.0.0"
   },
+
   "dependencies": {
-    "@google/genai": "^1.10.0",
+    "@google/genai": "^1.11.0",
     "chart.js": "^4.5.0",
     "leaflet": "^1.9.4"
   }
